@@ -1,0 +1,36 @@
+# Virtual environments and interpreters
+.venv/
+.venv-*/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+
+# Build output
+build/
+dist/
+*.whl
+
+# Tool caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Local application data and generated files (root only: never package code)
+/output/
+/outputs/
+/generated_jobs/
+/testdata/
+/.configbuilder/
+/AF3Builder/
+
+# Editor and OS files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

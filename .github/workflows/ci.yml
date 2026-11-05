@@ -1,0 +1,107 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  package:
+    name: package (py${{ matrix.python-version }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.9", "3.11"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Assert the requested interpreter
+        run: python -c "import sys; print(sys.version); assert sys.version_info[:2] == tuple(map(int, '${{ matrix.python-version }}'.split('.'))), sys.version"
+      - name: Build the distribution
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build
+      - name: The wheel ships only the application
+        run: |
+          python -c "import glob, zipfile; names = zipfile.ZipFile(glob.glob('dist/*.whl')[0]).namelist(); tops = {name.split('/')[0] for name in names}; assert all(top == 'configbuilder' or top.endswith('.dist-info') for top in tops), tops; assert not any(part in name for name in names for part in ('tests/', 'docs/', 'fixtures/', 'manual_test_data/')), names; print('wheel contents ok')"
+      - name: Install the built wheel
+        shell: bash
+        run: python -m pip install --force-reinstall dist/*.whl
+      - name: Every shipped module compiles
+        run: python -m compileall -q configbuilder
+      - name: Package imports
+        run: python -c "import configbuilder, configbuilder.app.cli, configbuilder.ui.services"
+      - name: Console entry point starts and ends cleanly on EOF (no TTY)
+        run: |
+          python -c "import subprocess, sys; raise SystemExit(subprocess.call([sys.executable, '-m', 'configbuilder'], stdin=subprocess.DEVNULL))"
+          python -c "import subprocess, sys; raise SystemExit(subprocess.call(['configbuilder'], stdin=subprocess.DEVNULL))"
+      - name: Pipeline smoke - build and write one AF3 JSON
+        shell: python
+        run: |
+          import json, os, pathlib, tempfile
+          os.chdir(tempfile.mkdtemp())
+          from configbuilder.ui.services import build_services
+
+          services = build_services()
+          services.projects.new("ci-smoke")
+          assert services.configuration.add_record("protein", "ACDEFGHIKLMNPQRSTVWY").ok
+          plan = services.generation.plan_base("out")
+          assert plan.ok, getattr(plan, "message", "")
+          result = services.generation.execute(plan)
+          assert result.ok, getattr(result, "message", "")
+
+          files = sorted(pathlib.Path("out").rglob("*.json"))
+          assert files, "no JSON was written"
+          document = json.loads(files[0].read_text(encoding="utf-8"))
+          assert document["name"] == "ci-smoke", document["name"]
+          assert document["modelSeeds"], "no model seeds"
+          assert document["sequences"], "no entities"
+          print("wrote", files[0])
+
+  gui:
+    name: gui (py3.11, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    env:
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install the package with the gui extra
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[gui]"
+      - name: Desktop entry point answers --help
+        run: af3-json-builder --help
+      - name: Qt window and services initialize offscreen
+        shell: python
+        run: |
+          from PySide6.QtWidgets import QApplication
+          from configbuilder.ui.render.qt.state import GuiState
+          from configbuilder.ui.render.qt.windows import MainWindow
+          from configbuilder.ui.services import build_services
+
+          app = QApplication.instance() or QApplication([])
+          window = MainWindow(GuiState())
+          window.close()
+          app.quit()
+          print("Qt window and application services initialized")
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+      - run: python -m pip install ruff
+      - run: ruff check --select E4,E7,E9,F configbuilder tools

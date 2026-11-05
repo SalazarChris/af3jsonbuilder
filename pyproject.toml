@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "configbuilder"
+version = "0.1.0"
+description = "Terminal builder that produces validated, reproducible standalone AF3 input files"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+# IMPLEMENTATION_PLAN.md §4: the core builder runs on the standard library
+# alone. Optional components sit behind a port with a documented fallback
+# (§9.6), so absence removes convenience or validation strength, never
+# capability. Nothing may move into [project].dependencies without amending
+# the plan.
+dependencies = []
+
+[project.optional-dependencies]
+# Structural-template checking, strengthened (plan §9.6). The builder checks
+# an attached template's mmCIF with its own lexical scan in every environment;
+# with gemmi present the same file is *also* parsed by an established mmCIF
+# library, which can only add strictness. The core package never needs it and
+# its absence removes strength, never capability.
+templates = [
+    "gemmi>=0.6",
+]
+# The optional desktop front end (Stage 1: review & preview). It is deliberately
+# NOT installed with the core package, so ``pip install .`` on 3.9 still needs
+# nothing. The floor below still admits 3.9:
+# there the range resolves to PySide6 6.10.3, while 6.11 and later require 3.10+
+# (which is what yields the current 6.12). Prefer a 3.10+ interpreter -- it is the
+# verified combination, and 6.11.2 is the first PySide6 the GUI suite is green
+# on:  pip install -e ".[gui]"
+gui = [
+    "PySide6>=6.6",
+]
+
+[project.scripts]
+configbuilder = "configbuilder.app.cli:main"
+
+# The desktop front end is a separate launcher, so the console entry point
+# above keeps working exactly as before. It is a ``gui-scripts`` entry so a
+# future Windows packaging step can suppress a console window; today it
+# behaves like any console script. PySide6 (the ``gui`` extra) must be
+# installed first; a 3.10-or-newer interpreter is recommended for it (see the
+# ``gui`` extra's note above for the 3.9 case).
+[project.gui-scripts]
+af3-json-builder = "configbuilder.ui.render.qt.application:main"
+
+[tool.setuptools.packages.find]
+include = ["configbuilder*"]

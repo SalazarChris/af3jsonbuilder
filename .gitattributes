@@ -1,0 +1,11 @@
+# Normalise text on commit and check out LF on every platform.
+* text=auto eol=lf
+
+# Binary assets, should any be added later.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.pdf  binary
+*.zip  binary
