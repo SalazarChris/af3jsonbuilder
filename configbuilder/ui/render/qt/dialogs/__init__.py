@@ -55,6 +55,7 @@ __all__ = [
     "ask_save_path",
     "choose_batch_file",
     "choose_batch_kind",
+    "choose_batch_target",
     "choose_output_folder",
     "confirm_batch_preview",
     "confirm_bond_removal",
