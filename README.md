@@ -30,7 +30,16 @@ desktop front end; gemmi strengthens structural-template checking.
    dependency check. Read the final lines of the window.
 3. To re-check the environment at any time, double-click
    **`check_dependencies.bat`**. It is read-only and reports PASS, MISSING,
-   INCOMPATIBLE or OPTIONAL for each requirement.
+   INCOMPATIBLE or OPTIONAL for each requirement, including imports of
+   `QtCore`, `QtGui` and `QtWidgets`.
+
+`setup_windows.bat` selects a 64-bit CPython automatically and prefers a
+python.org installation. It does not select Anaconda/Miniconda automatically,
+because those distributions can ship a conflicting Qt/MSVC runtime. If an
+existing `.venv` cannot import `QtWidgets`, setup preserves it as
+`.venv.backup-<timestamp>` and rebuilds it; the backup is kept. If no compatible
+interpreter is found, install 64-bit Python 3.12 from python.org and run setup
+again.
 
 If Windows blocks the scripts, right-click the file, choose **Properties**, and
 clear the **Unblock** checkbox before running it.

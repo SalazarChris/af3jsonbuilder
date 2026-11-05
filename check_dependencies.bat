@@ -42,6 +42,8 @@ goto :pause_end
 :failed
 echo.
 echo Dependency check found a problem. No packages were modified.
+echo Run setup_windows.bat to rebuild a broken environment automatically;
+echo the previous .venv is preserved as .venv.backup-^<timestamp^>.
 set "RESULT=1"
 :pause_end
 echo.
